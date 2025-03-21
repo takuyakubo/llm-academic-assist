@@ -1,0 +1,295 @@
+# OpenAPI仕様 - 拡張部分
+# このファイルは03_OpenAPI仕様_基本.yamlの拡張部分で、レスポンス定義と追加エンドポイントを含みます
+
+paths:
+  # LLM関連エンドポイント
+  /llm/chat:
+    post:
+      tags:
+        - LLM
+      summary: LLMとのチャット
+      description: LLMに単一のメッセージを送信し、応答を取得します
+      operationId: chatWithLLM
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - message
+              properties:
+                message:
+                  type: string
+                  example: "波動関数の物理的な意味を教えてください"
+                model:
+                  type: string
+                  example: "claude-3-opus-20240229"
+                  description: "使用するLLMモデル"
+                documentId:
+                  type: string
+                  example: "507f1f77bcf86cd799439014"
+                  description: "関連付ける文書のID（オプション）"
+                sectionIds:
+                  type: array
+                  items:
+                    type: string
+                  example: ["507f1f77bcf86cd799439015"]
+                  description: "コンテキストとして使用するセクションID（オプション）"
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: チャット応答
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        example: "chat_507f1f77bcf86cd799439025"
+                      message:
+                        type: string
+                        example: "波動関数の物理的な意味を教えてください"
+                      response:
+                        type: string
+                        example: "波動関数は量子力学における基本的な概念で、粒子やシステムの量子状態を完全に記述する数学的な関数です..."
+                      model:
+                        type: string
+                        example: "claude-3-opus-20240229"
+                      createdAt:
+                        type: string
+                        format: date-time
+                        example: "2023-03-10T15:20:00.000Z"
+                      tokensUsed:
+                        type: object
+                        properties:
+                          input:
+                            type: integer
+                            example: 15
+                          output:
+                            type: integer
+                            example: 512
+                          total:
+                            type: integer
+                            example: 527
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          description: レート制限超過
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                        example: "RATE_001"
+                      message:
+                        type: string
+                        example: "APIリクエスト制限を超過しました。しばらく待ってから再試行してください。"
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  # 文書検索エンドポイント
+  /search:
+    get:
+      tags:
+        - 検索
+      summary: 全文検索
+      description: プロジェクト内のすべてのコンテンツ（文書、ノート、チャット）を検索します
+      operationId: searchAll
+      parameters:
+        - name: query
+          in: query
+          description: 検索クエリ
+          required: true
+          schema:
+            type: string
+            example: "波動関数 確率解釈"
+        - name: projectId
+          in: query
+          description: 検索対象のプロジェクトID（指定しない場合はすべてのプロジェクト）
+          schema:
+            type: string
+            example: "507f1f77bcf86cd799439012"
+        - name: types
+          in: query
+          description: 検索対象のコンテンツタイプ（カンマ区切り）
+          schema:
+            type: string
+            example: "document,note,chat"
+        - name: page
+          in: query
+          description: ページ番号
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: limit
+          in: query
+          description: 1ページあたりの結果数
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+            default: 10
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: 検索結果
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      totalResults:
+                        type: integer
+                        example: 42
+                      results:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            id:
+                              type: string
+                              example: "507f1f77bcf86cd799439015"
+                            type:
+                              type: string
+                              enum: [document, section, note, chat]
+                              example: "section"
+                            title:
+                              type: string
+                              example: "1.2 波動関数と確率解釈"
+                            snippet:
+                              type: string
+                              example: "...量子力学における<em>波動関数</em> Ψ(r,t) は、系の状態を完全に記述します。ボルンの<em>確率解釈</em>によれば..."
+                            score:
+                              type: number
+                              example: 0.87
+                            projectId:
+                              type: string
+                              example: "507f1f77bcf86cd799439012"
+                            documentId:
+                              type: string
+                              example: "507f1f77bcf86cd799439014"
+                      pagination:
+                        $ref: '#/components/schemas/Pagination'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+# 標準レスポンス定義
+components:
+  responses:
+    BadRequest:
+      description: リクエスト形式エラー
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    
+    Unauthorized:
+      description: 認証エラー
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success:
+                type: boolean
+                example: false
+              error:
+                type: object
+                properties:
+                  code:
+                    type: string
+                    example: "AUTH_001"
+                  message:
+                    type: string
+                    example: "認証に失敗しました。ログインしてください。"
+    
+    Forbidden:
+      description: アクセス権限エラー
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success:
+                type: boolean
+                example: false
+              error:
+                type: object
+                properties:
+                  code:
+                    type: string
+                    example: "AUTH_003"
+                  message:
+                    type: string
+                    example: "このリソースにアクセスする権限がありません"
+    
+    NotFound:
+      description: リソースが見つからない
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success:
+                type: boolean
+                example: false
+              error:
+                type: object
+                properties:
+                  code:
+                    type: string
+                    example: "RESOURCE_001"
+                  message:
+                    type: string
+                    example: "指定されたリソースが見つかりません"
+    
+    ServerError:
+      description: サーバー内部エラー
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success:
+                type: boolean
+                example: false
+              error:
+                type: object
+                properties:
+                  code:
+                    type: string
+                    example: "SERVER_001"
+                  message:
+                    type: string
+                    example: "サーバー内部でエラーが発生しました"
