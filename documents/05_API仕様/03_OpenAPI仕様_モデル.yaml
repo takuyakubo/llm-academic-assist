@@ -1,0 +1,240 @@
+# OpenAPI仕様 - データモデル定義
+# このファイルは03_OpenAPI仕様_基本.yamlから参照されるモデル定義を含みます
+
+components:
+  schemas:
+    # プロジェクト関連モデル
+    Project:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "507f1f77bcf86cd799439012"
+        name:
+          type: string
+          example: "量子力学研究"
+        description:
+          type: string
+          example: "量子力学の基本原理と応用に関する研究プロジェクト"
+        ownerId:
+          type: string
+          example: "507f1f77bcf86cd799439011"
+        isPublic:
+          type: boolean
+          example: false
+        members:
+          type: array
+          items:
+            type: object
+            properties:
+              userId:
+                type: string
+                example: "507f1f77bcf86cd799439013"
+              role:
+                type: string
+                enum: [owner, editor, viewer]
+                example: "editor"
+              joinedAt:
+                type: string
+                format: date-time
+                example: "2023-02-15T09:30:00.000Z"
+        documentCount:
+          type: integer
+          example: 5
+        tags:
+          type: array
+          items:
+            type: string
+          example: ["量子力学", "物理学", "研究"]
+        createdAt:
+          type: string
+          format: date-time
+          example: "2023-02-01T10:00:00.000Z"
+        updatedAt:
+          type: string
+          format: date-time
+          example: "2023-03-01T14:30:00.000Z"
+
+    # 文書関連モデル
+    Document:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "507f1f77bcf86cd799439014"
+        projectId:
+          type: string
+          example: "507f1f77bcf86cd799439012"
+        title:
+          type: string
+          example: "量子力学の数学的基礎"
+        description:
+          type: string
+          example: "ヒルベルト空間と波動関数の数学的側面について解説した教科書"
+        originalFilename:
+          type: string
+          example: "quantum_mechanics_math_foundations.pdf"
+        fileType:
+          type: string
+          enum: [pdf, image, text]
+          example: "pdf"
+        fileSize:
+          type: integer
+          example: 12582912
+        pageCount:
+          type: integer
+          example: 245
+        processingStatus:
+          type: string
+          enum: [pending, processing, completed, failed]
+          example: "completed"
+        processingProgress:
+          type: number
+          minimum: 0
+          maximum: 100
+          example: 100
+        lastProcessedAt:
+          type: string
+          format: date-time
+          example: "2023-03-05T08:45:00.000Z"
+        uploaderId:
+          type: string
+          example: "507f1f77bcf86cd799439011"
+        tags:
+          type: array
+          items:
+            type: string
+          example: ["量子力学", "数学", "ヒルベルト空間"]
+        createdAt:
+          type: string
+          format: date-time
+          example: "2023-03-01T14:00:00.000Z"
+        updatedAt:
+          type: string
+          format: date-time
+          example: "2023-03-05T08:45:00.000Z"
+
+    DocumentSection:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "507f1f77bcf86cd799439015"
+        documentId:
+          type: string
+          example: "507f1f77bcf86cd799439014"
+        title:
+          type: string
+          example: "1.2 波動関数と確率解釈"
+        level:
+          type: integer
+          minimum: 1
+          example: 2
+        pageStart:
+          type: integer
+          example: 15
+        pageEnd:
+          type: integer
+          example: 23
+        content:
+          type: string
+          example: "# 1.2 波動関数と確率解釈\n\n量子力学における波動関数 $\\Psi(\\mathbf{r},t)$ は、系の状態を完全に記述します。"
+        contentFormat:
+          type: string
+          enum: [markdown, html, text]
+          example: "markdown"
+        parent:
+          type: string
+          example: "507f1f77bcf86cd799439016"
+        children:
+          type: array
+          items:
+            type: string
+          example: ["507f1f77bcf86cd799439017", "507f1f77bcf86cd799439018"]
+
+    # ノート関連モデル
+    Note:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "507f1f77bcf86cd799439019"
+        title:
+          type: string
+          example: "シュレディンガー方程式の要点まとめ"
+        userId:
+          type: string
+          example: "507f1f77bcf86cd799439011"
+        projectId:
+          type: string
+          example: "507f1f77bcf86cd799439012"
+        documentId:
+          type: string
+          example: "507f1f77bcf86cd799439014"
+        content:
+          type: string
+          example: "# シュレディンガー方程式の要点\n\n## 1. 方程式の形式\n\n時間依存シュレディンガー方程式は以下の形で表される"
+        format:
+          type: string
+          enum: [markdown, html]
+          example: "markdown"
+        sourceSections:
+          type: array
+          items:
+            type: string
+          example: ["507f1f77bcf86cd799439015", "507f1f77bcf86cd799439020"]
+        isAutoGenerated:
+          type: boolean
+          example: true
+        createdAt:
+          type: string
+          format: date-time
+          example: "2023-03-15T09:40:00.000Z"
+        updatedAt:
+          type: string
+          format: date-time
+          example: "2023-03-16T11:20:00.000Z"
+        tags:
+          type: array
+          items:
+            type: string
+          example: ["要点", "方程式", "量子力学"]
+
+    # ユーティリティスキーマ
+    Pagination:
+      type: object
+      properties:
+        currentPage:
+          type: integer
+          example: 1
+        totalPages:
+          type: integer
+          example: 5
+        totalItems:
+          type: integer
+          example: 42
+        itemsPerPage:
+          type: integer
+          example: 10
+
+    Error:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+              example: "DOC_001"
+            message:
+              type: string
+              example: "ドキュメント処理中にエラーが発生しました"
+            details:
+              type: object
+              example: {
+                "field": "file",
+                "reason": "不正なPDFフォーマットです"
+              }
