@@ -1,0 +1,753 @@
+openapi: 3.0.3
+info:
+  title: LLM学術文書支援システム API
+  description: 大規模言語モデル(LLM)を活用した学術文書理解支援のための API
+  version: 1.0.0
+  contact:
+    name: API Support
+    email: support@example.com
+
+servers:
+  - url: https://api.example.com/v1
+    description: 本番環境
+  - url: https://staging-api.example.com/v1
+    description: ステージング環境
+  - url: http://localhost:8000/v1
+    description: 開発環境
+
+tags:
+  - name: auth
+    description: 認証関連
+  - name: projects
+    description: プロジェクト管理
+  - name: documents
+    description: 文書管理
+  - name: sections
+    description: 文書セクション
+  - name: llm
+    description: LLM連携
+  - name: notes
+    description: ノート生成
+  - name: search
+    description: 検索機能
+
+paths:
+  # 認証関連エンドポイント
+  /auth/register:
+    post:
+      tags:
+        - auth
+      summary: ユーザー登録
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserRegister'
+      responses:
+        '201':
+          description: 登録成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /auth/login:
+    post:
+      tags:
+        - auth
+      summary: ログイン
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserLogin'
+      responses:
+        '200':
+          description: ログイン成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthToken'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  # プロジェクト関連エンドポイント
+  /projects:
+    get:
+      tags:
+        - projects
+      summary: プロジェクト一覧取得
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/PaginationLimit'
+        - $ref: '#/components/parameters/PaginationOffset'
+      responses:
+        '200':
+          description: プロジェクト一覧
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Project'
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    post:
+      tags:
+        - projects
+      summary: プロジェクト作成
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProjectCreate'
+      responses:
+        '201':
+          description: プロジェクト作成成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Project'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /projects/{projectId}:
+    get:
+      tags:
+        - projects
+      summary: プロジェクト詳細取得
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ProjectId'
+      responses:
+        '200':
+          description: プロジェクト詳細
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectDetail'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    put:
+      tags:
+        - projects
+      summary: プロジェクト更新
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ProjectId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProjectUpdate'
+      responses:
+        '200':
+          description: プロジェクト更新成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Project'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      tags:
+        - projects
+      summary: プロジェクト削除
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ProjectId'
+      responses:
+        '204':
+          description: プロジェクト削除成功
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # 文書関連エンドポイント
+  /projects/{projectId}/documents:
+    get:
+      tags:
+        - documents
+      summary: プロジェクト内の文書一覧取得
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ProjectId'
+        - $ref: '#/components/parameters/PaginationLimit'
+        - $ref: '#/components/parameters/PaginationOffset'
+      responses:
+        '200':
+          description: 文書一覧
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Document'
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    post:
+      tags:
+        - documents
+      summary: 文書アップロード
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ProjectId'
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+                title:
+                  type: string
+                  description: 文書のタイトル
+                metadata:
+                  type: object
+                  description: 文書のメタデータ（著者、発行日など）
+              required:
+                - file
+                - title
+      responses:
+        '201':
+          description: 文書アップロード成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Document'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  # LLM関連エンドポイント
+  /llm/chat:
+    post:
+      tags:
+        - llm
+      summary: LLMとのチャット
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChatRequest'
+      responses:
+        '200':
+          description: チャットレスポンス
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChatResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  # ノート生成エンドポイント
+  /notes:
+    post:
+      tags:
+        - notes
+      summary: ノート生成
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NoteCreateRequest'
+      responses:
+        '201':
+          description: ノート生成成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Note'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    ProjectId:
+      name: projectId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+      description: プロジェクトID
+    
+    DocumentId:
+      name: documentId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+      description: 文書ID
+    
+    PaginationLimit:
+      name: limit
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+      description: 1ページあたりの最大件数
+    
+    PaginationOffset:
+      name: offset
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 0
+        default: 0
+      description: オフセット（スキップする件数）
+
+  responses:
+    BadRequest:
+      description: 不正なリクエスト
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    
+    Unauthorized:
+      description: 認証エラー
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    
+    NotFound:
+      description: リソースが見つかりません
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+  schemas:
+    # ユーザー関連スキーマ
+    UserRegister:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          format: password
+          minLength: 8
+        displayName:
+          type: string
+          minLength: 1
+      required:
+        - email
+        - password
+        - displayName
+
+    UserLogin:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          format: password
+      required:
+        - email
+        - password
+
+    UserResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        displayName:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+
+    AuthToken:
+      type: object
+      properties:
+        token:
+          type: string
+        expiresAt:
+          type: string
+          format: date-time
+        user:
+          $ref: '#/components/schemas/UserResponse'
+
+    # プロジェクト関連スキーマ
+    ProjectCreate:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        description:
+          type: string
+          maxLength: 500
+        tags:
+          type: array
+          items:
+            type: string
+        settings:
+          type: object
+          properties:
+            defaultLLMModel:
+              type: string
+              enum: [claude-3-opus, claude-3-sonnet, gpt-4o]
+              default: claude-3-opus
+            publiclyViewable:
+              type: boolean
+              default: false
+      required:
+        - name
+
+    ProjectUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        description:
+          type: string
+          maxLength: 500
+        tags:
+          type: array
+          items:
+            type: string
+        settings:
+          type: object
+          properties:
+            defaultLLMModel:
+              type: string
+              enum: [claude-3-opus, claude-3-sonnet, gpt-4o]
+            publiclyViewable:
+              type: boolean
+
+    Project:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          type: string
+        ownerId:
+          type: string
+          format: uuid
+        tags:
+          type: array
+          items:
+            type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        documentCount:
+          type: integer
+
+    ProjectDetail:
+      allOf:
+        - $ref: '#/components/schemas/Project'
+        - type: object
+          properties:
+            settings:
+              type: object
+              properties:
+                defaultLLMModel:
+                  type: string
+                publiclyViewable:
+                  type: boolean
+                customPromptTemplates:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      name:
+                        type: string
+                      template:
+                        type: string
+            collaborators:
+              type: array
+              items:
+                type: object
+                properties:
+                  userId:
+                    type: string
+                    format: uuid
+                  displayName:
+                    type: string
+                  role:
+                    type: string
+                    enum: [owner, editor, viewer]
+                  addedAt:
+                    type: string
+                    format: date-time
+            progress:
+              type: object
+              properties:
+                completedSections:
+                  type: integer
+                totalSections:
+                  type: integer
+
+    # 文書関連スキーマ
+    Document:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        projectId:
+          type: string
+          format: uuid
+        fileType:
+          type: string
+          enum: [pdf, jpg, png]
+        originalFilename:
+          type: string
+        processingStatus:
+          type: string
+          enum: [pending, processing, completed, failed]
+        pageCount:
+          type: integer
+        metadata:
+          type: object
+          properties:
+            author:
+              type: string
+            publisher:
+              type: string
+            publicationDate:
+              type: string
+            language:
+              type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    # LLM関連スキーマ
+    ChatRequest:
+      type: object
+      properties:
+        message:
+          type: string
+          minLength: 1
+        projectId:
+          type: string
+          format: uuid
+        documentId:
+          type: string
+          format: uuid
+        sectionId:
+          type: string
+          format: uuid
+        conversationId:
+          type: string
+          format: uuid
+        modelName:
+          type: string
+          enum: [claude-3-opus, claude-3-sonnet, gpt-4o]
+      required:
+        - message
+        - projectId
+
+    ChatResponse:
+      type: object
+      properties:
+        response:
+          type: string
+        conversationId:
+          type: string
+          format: uuid
+        model:
+          type: string
+        referencedSections:
+          type: array
+          items:
+            type: object
+            properties:
+              sectionId:
+                type: string
+                format: uuid
+              documentId:
+                type: string
+                format: uuid
+              title:
+                type: string
+              relevanceScore:
+                type: number
+                format: float
+                minimum: 0
+                maximum: 1
+
+    # ノート関連スキーマ
+    NoteCreateRequest:
+      type: object
+      properties:
+        title:
+          type: string
+          minLength: 1
+        projectId:
+          type: string
+          format: uuid
+        documentId:
+          type: string
+          format: uuid
+        sourceSections:
+          type: array
+          items:
+            type: string
+            format: uuid
+        generationPrompt:
+          type: string
+        format:
+          type: string
+          enum: [markdown, latex]
+          default: markdown
+        difficultyLevel:
+          type: string
+          enum: [beginner, intermediate, advanced]
+          default: intermediate
+      required:
+        - title
+        - projectId
+        - sourceSections
+
+    Note:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        content:
+          type: string
+        format:
+          type: string
+          enum: [markdown, latex]
+        userId:
+          type: string
+          format: uuid
+        projectId:
+          type: string
+          format: uuid
+        documentId:
+          type: string
+          format: uuid
+        isAutoGenerated:
+          type: boolean
+        generationPrompt:
+          type: string
+        sourceSections:
+          type: array
+          items:
+            type: string
+            format: uuid
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    # ユーティリティスキーマ
+    Pagination:
+      type: object
+      properties:
+        total:
+          type: integer
+        limit:
+          type: integer
+        offset:
+          type: integer
+        hasMore:
+          type: boolean
+
+    Error:
+      type: object
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+        details:
+          type: object
